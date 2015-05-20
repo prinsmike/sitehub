@@ -53,7 +53,7 @@ func checkWorkDir() error {
 	return nil
 }
 
-func loadJSONFile(filePath string, data *JSONData) error {
+func loadJSONFile(filePath string, data *map[string]interface{}) error {
 	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return err

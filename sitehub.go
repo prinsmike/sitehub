@@ -1,10 +1,20 @@
 package main
 
+/* TODO:
+2015/05/19 21:18:20 No site configuration: open /var/sitehub/localhost/config.json: no such file or directory
+2015/05/19 21:18:20 No site data: open /var/sitehub/localhost/data.json: no such file or directory
+2015/05/19 21:18:20 Could not parse required templates: template: layout.html:1: unexpected "layout" in template invocation
+2015/05/19 21:18:20 http: panic serving [::1]:55555: runtime error: invalid memory address or nil pointer dereference
+
+*/
+
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"path"
+	"strings"
 )
 
 type Data struct {
@@ -13,7 +23,24 @@ type Data struct {
 	SiteConfig, SiteData                map[string]interface{}
 }
 
-type T []string
+func handle404(w http.ResponseWriter, r *http.Request, data *Data) {
+	w.WriteHeader(http.StatusNotFound)
+	custom404 := path.Join(data.Host, "404.html")
+	if validateFile(custom404) {
+		// server custom404
+		log.Printf("404 page not found!")
+		t, err := template.ParseFiles(custom404)
+		if err != nil {
+			log.Printf("Could not parse template file: %s\n", err)
+			fmt.Fprint(w, "404 page not found!")
+		} else {
+			t.Execute(w, data)
+		}
+	} else {
+		log.Printf("404 page not found!")
+		fmt.Fprint(w, "404 page not found!")
+	}
+}
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -29,21 +56,37 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	hp, err := hostPath(r.Host)
 	if err != nil {
 		//404
-		w.WriteHeader(http.StatusNotFound)
-		custom404 := path.Join(hp, "404.html")
-		fmt.Fprint(w, "404, page not found!")
+		handle404(w, r, data)
 	} else {
-
-		layout, fourOfour, templates := loadTemplates(hp)
-
-		err := loadJSONFile(path.Join(hp, "config.json"), &data.SiteConfig)
+		log.Println("Loading templates...")
+		templates, err := loadTemplates(hp)
 		if err != nil {
-			log.Printf("No site configuration: %s\n", err)
-		}
+			log.Println("Could not load templates.")
+		} else {
 
-		err := loadJSONFile(path.Join(hp, "data.json"), &data.SiteData)
-		if err != nil {
-			log.Printf("No site data: %s\n", err)
+			err := loadJSONFile(path.Join(hp, "config.json"), &data.SiteConfig)
+			if err != nil {
+				log.Printf("No site configuration: %s\n", err)
+			}
+
+			err = loadJSONFile(path.Join(hp, "data.json"), &data.SiteData)
+			if err != nil {
+				log.Printf("No site data: %s\n", err)
+			}
+
+			if len(templates) > 0 {
+				log.Printf("Parsing %d templates.", len(templates))
+				t, err := template.ParseFiles(templates...)
+				if err != nil {
+					log.Printf("Could not parse required templates: %s\n", err)
+					fmt.Fprint(w, "Could not parse required templates!")
+				} else {
+					t.ExecuteTemplate(w, "layout", data)
+				}
+			} else {
+				log.Printf("The site at %s has no templates. Please create some templates.", data.Host)
+				handle404(w, r, data)
+			}
 		}
 	}
 }
