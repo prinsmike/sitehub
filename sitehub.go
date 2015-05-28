@@ -1,13 +1,5 @@
 package main
 
-/* TODO:
-2015/05/19 21:18:20 No site configuration: open /var/sitehub/localhost/config.json: no such file or directory
-2015/05/19 21:18:20 No site data: open /var/sitehub/localhost/data.json: no such file or directory
-2015/05/19 21:18:20 Could not parse required templates: template: layout.html:1: unexpected "layout" in template invocation
-2015/05/19 21:18:20 http: panic serving [::1]:55555: runtime error: invalid memory address or nil pointer dereference
-
-*/
-
 import (
 	"fmt"
 	"html/template"
@@ -93,10 +85,11 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 func staticHandler(w http.ResponseWriter, r *http.Request) {
 	hp, err := hostPath(r.Host)
-	if err != nil {
+	if err == nil {
 		staticPath := path.Join(hp, "static")
 		if validatePath(staticPath) {
-			http.Handle(r.Host+"/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticPath))))
+			fs := http.StripPrefix("/static/", http.FileServer(http.Dir(staticPath)))
+			fs.ServeHTTP(w, r)
 		}
 	}
 }
