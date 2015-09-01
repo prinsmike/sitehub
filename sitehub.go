@@ -116,7 +116,10 @@ func main() {
 	http.HandleFunc("/favicon.ico", singleHandler)
 	http.HandleFunc("/robots.txt", singleHandler)
 
-	err = http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil)
+	log.Println("Starting server on port", config.port())
+	log.Println("Working directory set to", config.workDir())
+
+	err = http.ListenAndServe(":"+config.port(), nil)
 	if err != nil {
 		log.Fatalf("Server failed to start. Returned error %s\n", err)
 	}
